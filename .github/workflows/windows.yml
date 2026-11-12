@@ -27,6 +27,7 @@ jobs:
         shell: pwsh
         run: ./scripts/Build.ps1
       - name: Windows Service installation smoke test
+        timeout-minutes: 5
         shell: pwsh
         run: ./scripts/Smoke-Windows.ps1
       - name: Upload test results

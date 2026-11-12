@@ -8,7 +8,7 @@ $service = Get-Service ZiYinRemote -ErrorAction SilentlyContinue
 if ($service) {
     $registered = Get-CimInstance Win32_Service -Filter "Name='ZiYinRemote'"
     if ($registered.PathName -ne ('"' + $install + '\service\ZiYin.Service.exe"')) { throw '同名服务路径不匹配，拒绝卸载。' }
-    Stop-Service ZiYinRemote -Force
+    (Get-Service ZiYinRemote).Stop()
     (Get-Service ZiYinRemote).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
     & sc.exe delete ZiYinRemote | Out-Null
     if ($LASTEXITCODE -ne 0) { throw '删除服务失败。' }

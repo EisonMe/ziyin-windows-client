@@ -77,7 +77,7 @@ $existing = Get-Service -Name ZiYinRemote -ErrorAction SilentlyContinue
 if ($existing) {
     $registered = Get-CimInstance Win32_Service -Filter "Name='ZiYinRemote'"
     if ($registered.PathName -ne ('"' + $InstallDirectory + '\service\ZiYin.Service.exe"')) { throw '发现同名服务但安装路径不一致，停止覆盖。' }
-    Stop-Service ZiYinRemote -Force
+    (Get-Service ZiYinRemote).Stop()
     (Get-Service ZiYinRemote).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
 }
 Get-Process -Name ZiYin.Tray -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq "$InstallDirectory\tray\ZiYin.Tray.exe" } | Stop-Process -Force
@@ -129,7 +129,7 @@ Get-NetFirewallRule -Name ZiYinRemote -ErrorAction SilentlyContinue | Remove-Net
 if ($EnableLan) {
     New-NetFirewallRule -Name ZiYinRemote -DisplayName 'ZiYin Remote LAN API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $Port -Profile Private -RemoteAddress LocalSubnet -Program "$InstallDirectory\service\ZiYin.Service.exe" | Out-Null
 }
-Start-Service ZiYinRemote
+(Get-Service ZiYinRemote).Start()
 (Get-Service ZiYinRemote).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))
 Start-Sleep -Seconds 2
 if ((Get-Service ZiYinRemote).Status -ne 'Running') { throw '服务未持续运行，请检查配置与端口占用。' }
