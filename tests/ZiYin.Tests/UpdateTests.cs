@@ -83,6 +83,20 @@ public sealed class UpdateTests : IDisposable
         Assert.True(lifecycle.Starts>=2);
     }
     [Fact]
+    public async Task FailedRollbackLeavesJournalIncompleteDespiteOlderSuccessResult()
+    {
+        var install=MakeInstalled(); var journal=Path.Combine(root,"data","journal.json");
+        PackageInstaller.Save(Path.Combine(root,"data","result.json"),new InstallResult("rolled_back","1.0.0","previous attempt",DateTimeOffset.UtcNow.AddDays(-1)));
+        var lifecycle=new FakeLifecycle { FailNewHealth=true, FailOldHealth=true };
+        await Assert.ThrowsAsync<IOException>(()=>new PackageInstaller(lifecycle).Apply(MakePackage("1.1.0"),install,journal,"1.1.0"));
+        var state=JsonSerializer.Deserialize<InstallJournal>(File.ReadAllText(journal))!;
+        Assert.Equal("replacing",state.Phase);
+        Assert.True(Directory.Exists(state.Backup));
+        lifecycle.FailOldHealth=false;
+        await new PackageInstaller(lifecycle).Recover(journal,CancellationToken.None);
+        Assert.Contains("rolled_back",File.ReadAllText(journal));
+    }
+    [Fact]
     public async Task InterruptedSwapRollsBackFromDurableJournal()
     {
         var install=MakeInstalled(); var backup=Path.Combine(install,".update-backup-test"); Directory.CreateDirectory(backup);
@@ -123,10 +137,10 @@ public sealed class UpdateTests : IDisposable
     public void Dispose()=>Directory.Delete(root,true);
     private sealed class FakeLifecycle:IInstallLifecycle
     {
-        public bool FailNewHealth, FailStopOnce; public int Stops, Starts;
+        public bool FailNewHealth, FailStopOnce, FailOldHealth; public int Stops, Starts;
         public Task Stop(CancellationToken t) { Stops++; if(FailStopOnce){FailStopOnce=false;throw new IOException("stop unavailable");}return Task.CompletedTask; }
         public Task Start(CancellationToken t){Starts++;return Task.CompletedTask;}
-        public Task<bool> Healthy(string v,CancellationToken t)=>Task.FromResult(!(FailNewHealth&&v=="1.1.0"));
+        public Task<bool> Healthy(string v,CancellationToken t)=>Task.FromResult(!(FailNewHealth&&v=="1.1.0") && !(FailOldHealth&&v=="1.0.0"));
     }
     private sealed class FakeHandler(Func<HttpRequestMessage,HttpResponseMessage> response):HttpMessageHandler
     {protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancellationToken)=>Task.FromResult(response(request));}

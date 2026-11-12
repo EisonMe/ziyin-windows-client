@@ -75,10 +75,14 @@ catch (Exception ex)
     try
     {
         var resultPath = Path.Combine(updateRoot, "result.json");
-        var previous = File.Exists(resultPath) ? JsonSerializer.Deserialize<InstallResult>(File.ReadAllText(resultPath)) : null;
-        if (previous?.Status == "rolled_back")
+        InstallJournal? currentJournal = null;
+        try { if (File.Exists(journalPath)) currentJournal = JsonSerializer.Deserialize<InstallJournal>(File.ReadAllText(journalPath)); }
+        catch (Exception readError) when (readError is IOException or JsonException) { }
+        // Only this transaction's durable journal may authorize removing startup recovery.
+        // result.json can describe an older rollback and must never decide this.
+        if (currentJournal?.Phase == "rolled_back")
             await Run("schtasks.exe", ["/Delete", "/TN", "ZiYinUpdateRecovery", "/F"], CancellationToken.None, ignoreFailure: true);
-        if (previous?.Status != "rolled_back") PackageInstaller.Save(resultPath, new InstallResult("failed", ReleaseVersion.Current, $"更新失败 ({ex.GetType().Name})。旧文件保留；如果服务未恢复，请运行恢复命令。", DateTimeOffset.UtcNow));
+        else PackageInstaller.Save(resultPath, new InstallResult("failed", ReleaseVersion.Current, $"更新失败 ({ex.GetType().Name})。备份及恢复任务已保留；请检查本机服务和恢复记录。", DateTimeOffset.UtcNow));
     }
     catch { }
     if (lifecycle is not null) { try { await lifecycle.RestartTrays(CancellationToken.None); } catch { } }
