@@ -69,7 +69,9 @@ try {
     # Validate actual TLS with normal certificate verification on the disposable runner.
     Write-Host 'Smoke phase: install TLS and firewall'
     & "$package\scripts\Install.ps1" -EnableLan -GenerateTls
-    $trustedCert = Import-Certificate -FilePath "$env:ProgramData\ZiYin\server.cer" -CertStoreLocation Cert:\CurrentUser\Root
+    Write-Host 'Smoke phase: trust temporary certificate in LocalMachine root store'
+    $trustedCert = Import-Certificate -FilePath "$env:ProgramData\ZiYin\server.cer" -CertStoreLocation Cert:\LocalMachine\Root
+    Write-Host 'Smoke phase: request HTTPS with certificate verification'
     $tlsHealth = Invoke-RestMethod -TimeoutSec 15 'https://127.0.0.1:17643/api/health' -Headers $headers
     if ($tlsHealth.status -ne 'ok') { throw 'Verified TLS health failed' }
     $firewall = Get-NetFirewallRule -Name ZiYinRemote
@@ -81,7 +83,7 @@ try {
 } finally {
     if ($headers) { $headers.Clear() }; $key = $null
     & "$package\scripts\Uninstall.ps1" -Confirm:$false
-    if ($trustedCert) { Remove-Item -LiteralPath "Cert:\CurrentUser\Root\$($trustedCert.Thumbprint)" }
+    if ($trustedCert) { Remove-Item -LiteralPath "Cert:\LocalMachine\Root\$($trustedCert.Thumbprint)" }
 }
 if (Get-Service ZiYinRemote -ErrorAction SilentlyContinue) { throw 'Service still exists after uninstall' }
 if (-not (Test-Path "$env:ProgramData\ZiYin\files\smoke.txt")) { throw 'Uninstall deleted user data' }
