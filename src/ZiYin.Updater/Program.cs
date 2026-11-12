@@ -27,6 +27,14 @@ try
         catch (IOException) { await Task.Delay(500, deadline.Token); }
     }
     if (updateLock is null) return 7;
+    // Re-check after acquiring the lock: a manual uninstall may have won the handoff race.
+    if (!Directory.Exists(install)) return 11;
+    if (args[0] == "apply" && (!File.Exists(Path.Combine(install, "service", "ZiYin.Service.exe")) || !File.Exists(Path.Combine(install, "VERSION")))) return 11;
+    using (var serviceKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\ZiYinRemote"))
+    {
+        var registered = serviceKey?.GetValue("ImagePath") as string;
+        if (!string.Equals(registered?.Trim().Trim('"'), Path.Combine(install, "service", "ZiYin.Service.exe"), StringComparison.OrdinalIgnoreCase)) return 12;
+    }
     lifecycle = new WindowsLifecycle(install, data);
     var engine = new PackageInstaller(lifecycle);
     if (args[0] == "recover")
@@ -68,6 +76,8 @@ catch (Exception ex)
     {
         var resultPath = Path.Combine(updateRoot, "result.json");
         var previous = File.Exists(resultPath) ? JsonSerializer.Deserialize<InstallResult>(File.ReadAllText(resultPath)) : null;
+        if (previous?.Status == "rolled_back")
+            await Run("schtasks.exe", ["/Delete", "/TN", "ZiYinUpdateRecovery", "/F"], CancellationToken.None, ignoreFailure: true);
         if (previous?.Status != "rolled_back") PackageInstaller.Save(resultPath, new InstallResult("failed", ReleaseVersion.Current, $"更新失败 ({ex.GetType().Name})。旧文件保留；如果服务未恢复，请运行恢复命令。", DateTimeOffset.UtcNow));
     }
     catch { }

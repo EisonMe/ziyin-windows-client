@@ -15,6 +15,8 @@ internal sealed class WindowsLifecycle(string install, string data) : IInstallLi
     private readonly HashSet<int> sessions = [];
     public async Task Stop(CancellationToken token)
     {
+        var savedSessions = Path.Combine(data, "updates", "tray-sessions.json");
+        if (File.Exists(savedSessions)) foreach (var id in JsonSerializer.Deserialize<int[]>(File.ReadAllText(savedSessions)) ?? []) sessions.Add(id);
         // Record only existing trays and restart those sessions with their ordinary user token.
         foreach (var process in Process.GetProcessesByName("ZiYin.Tray"))
         {

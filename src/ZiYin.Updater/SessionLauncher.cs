@@ -14,6 +14,7 @@ internal static class SessionLauncher
         if (session <= 0 || !WTSQueryUserToken((uint)session, out var token)) return;
         using (token)
         {
+            if (!GetTokenInformation(token, 20, out var elevated, sizeof(int), out _) || elevated != 0) return;
             if (!CreateEnvironmentBlock(out var environment, token, false)) throw new Win32Exception(Marshal.GetLastWin32Error());
             try
             {
@@ -27,6 +28,7 @@ internal static class SessionLauncher
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct StartupInfo
     { public int Size; public string? Reserved, Desktop, Title; public int X,Y,XSize,YSize,XCountChars,YCountChars,FillAttribute,Flags; public short ShowWindow, Reserved2Size; public IntPtr Reserved2, StdInput, StdOutput, StdError; }
     [StructLayout(LayoutKind.Sequential)] private struct ProcessInfo { public IntPtr Process, Thread; public uint ProcessId, ThreadId; }
+    [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(SafeAccessTokenHandle token, int infoClass, out int info, int length, out int needed);
     [DllImport("wtsapi32.dll", SetLastError = true)] private static extern bool WTSQueryUserToken(uint session, out SafeAccessTokenHandle token);
     [DllImport("userenv.dll", SetLastError = true)] private static extern bool CreateEnvironmentBlock(out IntPtr environment, SafeAccessTokenHandle token, bool inherit);
     [DllImport("userenv.dll")] private static extern bool DestroyEnvironmentBlock(IntPtr environment);
