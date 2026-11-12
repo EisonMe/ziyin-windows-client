@@ -1,4 +1,4 @@
-# Intended for an ephemeral elevated GitHub Windows runner, not a production machine.
+﻿# Intended for an ephemeral elevated GitHub Windows runner, not a production machine.
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 param()

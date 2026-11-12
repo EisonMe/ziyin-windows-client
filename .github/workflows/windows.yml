@@ -15,8 +15,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Check PowerShell syntax
-        shell: pwsh
+      - name: Check Windows PowerShell 5.1 syntax
+        shell: powershell
         run: |
           Get-ChildItem scripts/*.ps1 | ForEach-Object {
             $tokens = $null; $errors = $null

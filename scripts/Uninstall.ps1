@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='Medium')]
 param([switch]$KeepBinaries)
 $ErrorActionPreference = 'Stop'

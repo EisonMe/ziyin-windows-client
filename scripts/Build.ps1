@@ -1,6 +1,7 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([string]$Output = (Join-Path $PSScriptRoot '..\artifacts'), [switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
+$Output = [IO.Path]::GetFullPath($Output)
 $project = Split-Path $PSScriptRoot -Parent
 Push-Location $project
 try {
@@ -13,7 +14,7 @@ try {
     }
     foreach ($folder in @('scripts','docs')) { Copy-Item -LiteralPath "$project/$folder" -Destination $package -Recurse -Force }
     Copy-Item "$project/README.md" $package -Force
-    Get-ChildItem $package -Recurse -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $($_.Path.Substring($package.Length + 1))" } | Set-Content "$Output/SHA256SUMS.txt"
+    Get-ChildItem $package -Recurse -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $([IO.Path]::GetRelativePath($package, $_.Path))" } | Set-Content "$Output/SHA256SUMS.txt"
     Compress-Archive -Path "$package/*" -DestinationPath "$Output/ziyin-windows-client-win-x64.zip" -Force
     Get-FileHash "$Output/ziyin-windows-client-win-x64.zip" -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  ziyin-windows-client-win-x64.zip" } | Add-Content "$Output/SHA256SUMS.txt"
 } finally { Pop-Location }
