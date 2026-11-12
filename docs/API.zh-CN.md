@@ -23,7 +23,7 @@ export ZIYIN_API_KEY
 curl --fail-with-body -H "Authorization: Bearer $ZIYIN_API_KEY" "$ZIYIN_BASE/api/health"
 curl --fail-with-body -H "Authorization: Bearer $ZIYIN_API_KEY" \
   -H 'X-ZiYin-Request: 1' -H 'Content-Type: application/json' \
-  -d '{"command":"Get-Date; whoami","timeoutSeconds":30}' "$ZIYIN_BASE/api/tasks"
+  -d '{"command":"Get-Date; whoami","timeoutSeconds":60}' "$ZIYIN_BASE/api/tasks"
 # 从返回 JSON 取得 id
 TASK_ID='返回的任务id'
 curl -H "Authorization: Bearer $ZIYIN_API_KEY" "$ZIYIN_BASE/api/tasks/$TASK_ID"
@@ -47,7 +47,7 @@ $secret = Read-Host 'API key' -AsSecureString
 $key = [Net.NetworkCredential]::new('', $secret).Password
 $headers = @{ Authorization = "Bearer $key"; 'X-ZiYin-Request' = '1' }
 Invoke-RestMethod "$base/api/health" -Headers $headers
-$body = @{ command = 'Get-Date; whoami'; timeoutSeconds = 30 } | ConvertTo-Json
+$body = @{ command = 'Get-Date; whoami'; timeoutSeconds = 60 } | ConvertTo-Json
 $task = Invoke-RestMethod "$base/api/tasks" -Method Post -Headers $headers -ContentType 'application/json' -Body $body
 Invoke-RestMethod "$base/api/tasks/$($task.id)" -Headers $headers
 Invoke-RestMethod "$base/api/tasks/$($task.id)/output" -Headers $headers
@@ -92,7 +92,7 @@ JSON 属性采用 camelCase。所有 API 返回 `Cache-Control: no-store`。
 
 ## 任务与存储限制
 
-任务状态：`queued → running → completed/failed/timed_out/cancelled/interrupted`；排队取消可直接到 cancelled。`exitCode` 仅在进程正常退出时提供，超时/取消可能为空。Shell 为系统自带 Windows PowerShell，`-NoProfile -NonInteractive -EncodedCommand`。需要用户交互的命令不适用；超时 1–86400 秒，从工作线程取出任务时开始计时。
+任务状态：`queued → running → completed/failed/timed_out/cancelled/interrupted`；排队取消可直接到 cancelled。`exitCode` 仅在进程正常退出时提供，超时/取消可能为空。Shell 为系统自带 Windows PowerShell，`-NoProfile -NonInteractive -EncodedCommand`。需要用户交互的命令不适用；超时 1–86400 秒，从工作线程取出任务时开始计时，包含 PowerShell 启动和模块初始化。首次以 SYSTEM 运行可能较慢，首次调用建议至少 60 秒。
 
 并发 2，排队最多 64，总保留最多 200 条；stdout/stderr 各 256 Ki 字符，超出会继续排空但不保留。输出和任务记录只保存在内存，服务重启丢失；提交无幂等去重，网络重试前先查任务状态。不要在任务中故意重启/停止本服务；服务停机/异常退出不会重放任务。审计文件轮转上限约 5 MiB × 2，不记录命令内容、输出、密钥或输入文字。被执行命令本身仍可能写系统日志或泄露秘密。
 
