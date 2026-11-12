@@ -2,6 +2,33 @@
 
 本文对应当前 LAN API 实现，不使用旧设计中的 WSS/配对服务。
 
+## 选择接入方式
+
+客户端和调用端必须网络可达。`localhost` 只代表调用程序所在机器，不代表这台 Windows 电脑。WebUI 登录后可在「连接信息」查看网卡地址；选择调用端能访问、且 Windows 当前网卡实际拥有的 LAN/VPN IP。服务端 Host 校验不接受任意 DNS 别名。跨公网请使用 VPN，避免直接暴露端口。TLS 证书必须由调用端信任，或配置 CA；不要关闭证书验证。
+
+### Skill 调用看这里
+
+把下面提示词交给 Codex 或其他代码 Agent。可参考[已发布的真实 Skill 模板和只读脚本](https://github.com/EisonMe/astrbot_plugin_ziyin_client/tree/main/skills/ziyin-windows-client)。它应在其 Skill 发现目录创建可复用的 Skill 和脚本，再仅调用健康检查验证连通性；密钥须由用户在本机安全录入环境变量，禁止写入 Skill、日志或仓库。
+
+```text
+请为紫音 Windows 远程客户端创建一个可复用的 Agent Skill。先读取 https://github.com/EisonMe/ziyin-windows-client/blob/main/docs/API.zh-CN.md 完整 API 文档，并参考 https://github.com/EisonMe/astrbot_plugin_ziyin_client/tree/main/skills/ziyin-windows-client 的真实模板与脚本，以 API 实际响应为准。
+创建 skills/ziyin-windows-client/SKILL.md 和 skills/ziyin-windows-client/scripts/ziyin_client.py（或当前 Agent 的 Skill 发现目录中的等价路径）。默认只读：实现 health、settings、任务查询、文件列表；执行命令、上传/删除文件、桌面输入必须在用户明确授权后才调用。
+连接地址使用调用者可达的 Windows 主机地址，端口 17643；不要默认 localhost/127.0.0.1。LAN 可用时填写例如 https://192.168.1.100:17643；跨网络使用经过授权的 VPN 地址。API Key 从安全凭证管理器或 ZIYIN_API_KEY 环境变量读取，绝不写入文件、参数、日志或 git。默认校验 TLS 证书和主机名；如为自签名证书，配置可信 CA/证书，不得关闭校验。
+请在 Skill 中解释网络可达、端口、防火墙和 TLS 要求，提供安全设置凭证方法。完成文件后只执行 GET /api/health 连通测试；没有真实地址或密钥时不得声称连接成功，并说明用户需填写的配置。
+```
+
+### AstrBot 插件调用看这里
+
+把下面提示词交给有 AstrBot 管理权限的维护者/Agent。公开插件仓库应通过 AstrBot 官方插件管理器的 GitHub 安装入口安装；不要让插件自己下载并执行任意代码。安装后在插件配置填写远程 URL 和密钥，先做只读健康检查。
+
+```text
+请在当前 AstrBot 安装中通过官方插件管理器，从公开仓库 https://github.com/EisonMe/astrbot_plugin_ziyin_client 安装「紫音 Windows 远程客户端」插件；先核实仓库地址与插件 metadata，不要运行 curl|shell 或未知脚本。若当前实例没有管理员安装权限，请停止并给出由 AstrBot 管理员在插件市场/GitHub 安装入口操作的步骤，不要声称已安装。
+安装后配置插件 base_url 为我能从 AstrBot 主机访问的 Windows 客户端地址，端口 17643；不要填 localhost，除非 AstrBot 和客户端确在同一主机。默认由管理员把 API Key 填入插件的 api_key 密钥字段，不写入提示词、聊天、仓库或日志；只有在客户端 WebUI 已认证且明确选择包含密钥时，复制文本才会注入当前密钥。默认保持 TLS 证书与主机名验证；自签名证书请配置受信任 CA 文件，指纹只能作为额外校验，不能代替证书链验证。群聊、文件写入和桌面控制保持关闭。
+重载插件仅使用此 AstrBot 版本官方支持的管理操作。完成后调用只读健康检查工具验证连接；没有真实可达地址或 API Key 时停止在配置步骤，明确报告未联通，不要尝试执行命令。
+```
+
+所有方法均须由调用端能路由到 Windows 主机，并信任 TLS 证书；密钥只给可信管理员。WebUI 复制提示词默认使用占位密钥，只有登录后勾选并确认才会将真实密钥加入剪贴板，浏览器不持久保存密钥。
+
 ## 连接与权限
 
 - 基础 URL：`https://电脑实际IPv4:17643`；WebUI 显示本机实际网卡 IPv4 和配置端口。VPN/虚拟网卡也可能出现，请选局域网网卡。路由、防火墙和监听设置决定是否可达。

@@ -1,10 +1,10 @@
-紫音 Windows 客户端 1.1.0，首个公开稳定 Release。
+紫音 Windows 客户端 1.2.0
 
-- 管理员安装的 Windows Service、登录启动托盘、中文 WebUI 和认证 LAN API。
-- 启动及每 3 小时检查稳定版本，后台下载、RSA-PSS 签名与 SHA256 校验，独立 helper 替换、服务健康检查、失败回滚及开机恢复任务。
-- GitHub 直连失败后自动尝试可配置 HTTPS 下载代理；默认备用 ghfast.top 为第三方服务，不是 GitHub 官方 CDN。代理请求不含 API 密钥或账号凭据。
-- WebUI 展示当前/最新版本和更新状态，支持手动检查。
-- 更新保留配置、API 密钥、证书和用户文件。替换会中断当前后台任务，托盘恢复后需重新授权桌面控制。
+- 增加 Skill 与 AstrBot 插件接入说明及可复制配置提示词。
+- WebUI 登录后提供 LAN 地址选择、Windows 网卡实际拥有的 VPN IP 输入及安全复制提示词；API Key 默认不复制，显式勾选后再次确认才包含。
+- API 密钥不写入浏览器持久存储；保留完整中文 API 参考。
+- 包含独立 AstrBot 插件仓库链接；安装仅通过 AstrBot 官方管理器，由管理员操作。
+- 自动更新机制保持 v1.1.0 的 RSA-PSS 签名、SHA256 和配置保留链路不变。
 
 下载 `ziyin-windows-client-win-x64.zip` 并完整解压，管理员运行 `scripts/Install.ps1`。首次 LAN 安装推荐 `-EnableLan -GenerateTls`，按 README 核对并信任证书。程序自包含 .NET 10，无需单独安装运行时。
 
