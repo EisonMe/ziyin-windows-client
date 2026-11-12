@@ -12,7 +12,7 @@ $headers = $null
 $trustedCert = $null
 try {
     Write-Host 'Smoke phase: install/upgrade service'
-    & "$package\scripts\Install.ps1"
+    & "$package\scripts\Install.ps1" -DisableAutoUpdate
     # Simulate a legacy admin-owned key with an explicit Users read grant; upgrade must remove it.
     $keyForUpgrade = "$env:ProgramData\ZiYin\service\api-key.json"
     for ($i=0; $i -lt 30 -and -not (Test-Path $keyForUpgrade); $i++) { Start-Sleep -Seconds 1 }
@@ -20,7 +20,7 @@ try {
     $legacyAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545'), 'Read', 'Allow'))
     Set-Acl -LiteralPath $keyForUpgrade -AclObject $legacyAcl
     Write-Host 'Smoke phase: install/upgrade service'
-    & "$package\scripts\Install.ps1"
+    & "$package\scripts\Install.ps1" -DisableAutoUpdate
     $service = Get-CimInstance Win32_Service -Filter "Name='ZiYinRemote'"
     if ($service.StartMode -ne 'Auto' -or $service.StartName -ne 'LocalSystem') { throw 'Service identity/startup mismatch' }
     $keyPath = "$env:ProgramData\ZiYin\service\api-key.json"
@@ -68,7 +68,7 @@ try {
     if ($tasks.Count -ne 0) { throw 'Task records unexpectedly persisted' }
     # Validate actual TLS with normal certificate verification on the disposable runner.
     Write-Host 'Smoke phase: install TLS and firewall'
-    & "$package\scripts\Install.ps1" -EnableLan -GenerateTls
+    & "$package\scripts\Install.ps1" -DisableAutoUpdate -EnableLan -GenerateTls
     Write-Host 'Smoke phase: trust temporary certificate in LocalMachine root store'
     $trustedCert = Import-Certificate -FilePath "$env:ProgramData\ZiYin\server.cer" -CertStoreLocation Cert:\LocalMachine\Root
     Write-Host 'Smoke phase: request HTTPS with certificate verification'

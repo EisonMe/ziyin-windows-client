@@ -9,6 +9,8 @@ namespace ZiYin.Service;
 
 public sealed class ServiceSettings
 {
+    public bool AutoUpdate { get; set; } = true;
+    public string[] UpdateProxyPrefixes { get; set; } = ["https://ghfast.top/"];
     public int Port { get; set; } = 17643;
     public bool AllowRemote { get; set; }
     public bool TrustedLanHttp { get; set; }
@@ -24,6 +26,8 @@ public sealed class ServiceSettings
         if (settings.Port is < 1024 or > 65535) throw new InvalidDataException("Port 必须为 1024–65535。");
         if (settings.AllowRemote && !settings.Tls && !settings.TrustedLanHttp) throw new InvalidDataException("开放 LAN 必须配置 TLS 或显式选择 TrustedLanHttp。");
         if (!Path.IsPathFullyQualified(settings.DataDirectory) || !Path.IsPathFullyQualified(settings.FileRoot)) throw new InvalidDataException("目录必须为绝对路径。");
+        if (settings.UpdateProxyPrefixes is null || settings.UpdateProxyPrefixes.Length > 3) throw new InvalidDataException("更新代理最多 3 个。");
+        foreach (var proxy in settings.UpdateProxyPrefixes) ZiYin.Update.ReleaseTransport.ValidateProxy(proxy);
         SecureStorage.ProtectDirectory(settings.DataDirectory);
         SecureStorage.ProtectDirectory(settings.FileRoot);
         return settings;

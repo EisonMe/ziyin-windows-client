@@ -21,7 +21,7 @@ public sealed class ApiTests : IAsyncLifetime
     {
         Directory.CreateDirectory(directory);
         var config = Path.Combine(directory, "config.json");
-        File.WriteAllText(config, JsonSerializer.Serialize(new ServiceSettings { DataDirectory = Path.Combine(directory, "data"), FileRoot = Path.Combine(directory, "files") }));
+        File.WriteAllText(config, JsonSerializer.Serialize(new ServiceSettings { AutoUpdate = false, DataDirectory = Path.Combine(directory, "data"), FileRoot = Path.Combine(directory, "files") }));
         previousConfig = Environment.GetEnvironmentVariable("ZIYIN_CONFIG"); Environment.SetEnvironmentVariable("ZIYIN_CONFIG", config);
         factory = new WebApplicationFactory<Program>();
         client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
@@ -30,6 +30,8 @@ public sealed class ApiTests : IAsyncLifetime
     }
     [Theory]
     [InlineData("GET", "/api/health")]
+    [InlineData("GET", "/api/updates")]
+    [InlineData("POST", "/api/updates/check")]
     [InlineData("GET", "/api/settings")]
     [InlineData("GET", "/api/key")]
     [InlineData("GET", "/api/tasks")]

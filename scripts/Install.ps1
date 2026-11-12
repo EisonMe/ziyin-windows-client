@@ -4,6 +4,8 @@ param(
     [ValidateRange(1024,65535)][int]$Port = 17643,
     [switch]$EnableLan,
     [switch]$TrustedLanHttp,
+    [switch]$DisableAutoUpdate,
+    [string[]]$UpdateProxyPrefixes = @("https://ghfast.top/"),
     [switch]$GenerateTls,
     [string]$CertificatePath,
     [Security.SecureString]$CertificatePassword,
@@ -60,9 +62,19 @@ Protect-Directory $base $true
 Protect-Directory $data $false
 Protect-Directory $files $false
 Protect-Directory $InstallDirectory $true
+$updateRoot = "$data\updates"
+Protect-Directory $updateRoot $false
+try { $updateLock = [IO.File]::Open("$updateRoot\update.lock",[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None) }
+catch { throw '后台更新正在运行，请稍后重试安装。' }
+try {
+if (Test-Path "$updateRoot\journal.json") {
+    $journal = Get-Content "$updateRoot\journal.json" -Raw | ConvertFrom-Json
+    if ($journal.Phase -notin @('committed','rolled_back')) { throw '存在未完成更新，请先运行 ZiYinUpdateRecovery 恢复任务。' }
+}
 # Existing child files may carry explicit read grants; remove them as well.
 foreach ($privateRoot in @($data,$files)) {
     foreach ($item in Get-ChildItem -LiteralPath $privateRoot -Recurse -Force) {
+        if ($item.FullName -eq "$updateRoot\update.lock") { continue }
         if ($item.PSIsContainer) { Protect-Directory $item.FullName $false; continue }
         $fileAcl = New-Object Security.AccessControl.FileSecurity
         $fileAcl.SetAccessRuleProtection($true,$false)
@@ -82,8 +94,9 @@ if ($existing) {
 }
 Get-Process -Name ZiYin.Tray -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq "$InstallDirectory\tray\ZiYin.Tray.exe" } | Stop-Process -Force
 if ($source -ne $InstallDirectory) {
-    foreach ($folder in @('service','tray','scripts','docs')) { Copy-Item -LiteralPath "$source\$folder" -Destination $InstallDirectory -Recurse -Force }
+    foreach ($folder in @('service','tray','updater','scripts','docs')) { Copy-Item -LiteralPath "$source\$folder" -Destination $InstallDirectory -Recurse -Force }
     Copy-Item "$source\README.md" $InstallDirectory -Force
+    Copy-Item "$source\VERSION" $InstallDirectory -Force
 }
 # Reset inherited file ACLs; extracted binaries must never retain user-writable ACLs.
 & icacls.exe $InstallDirectory /reset /T /C /Q | Out-Null
@@ -115,6 +128,7 @@ $settings = @{
     Port=$Port; AllowRemote=[bool]$EnableLan; TrustedLanHttp=[bool]$TrustedLanHttp
     CertificatePath=$certificateTarget; CertificatePassword=$plainPassword
     DataDirectory=$data; FileRoot=$files
+    AutoUpdate=(-not $DisableAutoUpdate); UpdateProxyPrefixes=$UpdateProxyPrefixes
 }
 $settings | ConvertTo-Json | Set-Content -LiteralPath "$data\service.json" -Encoding UTF8
 @{port=$Port; scheme=$(if ($certificateTarget) {'https'} else {'http'})} | ConvertTo-Json | Set-Content -LiteralPath "$base\client.json" -Encoding UTF8
@@ -138,3 +152,5 @@ Write-Host "浏览器打开：$(if ($certificateTarget) {'https'} else {'http'})
 Write-Host '首次登录密钥：管理员运行 scripts\Get-ApiKey.ps1，在本机窗口查看。'
 Write-Host '托盘会在每次登录启动。现在请从普通用户会话运行 tray\ZiYin.Tray.exe，不要以管理员运行托盘。'
 if ($TrustedLanHttp -and -not $certificateTarget) { Write-Warning '当前为 HTTP 明文，仅允许在完全可信的隔离 LAN 使用；密钥与命令可能被同网段监听。' }
+
+} finally { $updateLock.Dispose() }

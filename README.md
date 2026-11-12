@@ -6,7 +6,7 @@
 
 ## 下载与安装
 
-1. 打开本仓库 **Actions → Windows build, test and package → 成功运行 → Artifacts**，下载 `ziyin-windows-client-win-x64`。解压 artifact，再解压其中的 zip。只支持 Windows 10/11、Windows Server x64，需有 Windows PowerShell 5.1；程序已自包含 .NET 运行时。
+1. 打开 [最新正式 Release](https://github.com/EisonMe/ziyin-windows-client/releases/latest)，下载 `ziyin-windows-client-win-x64.zip` 并完整解压。只支持 Windows 10/11、Windows Server x64，需有 Windows PowerShell 5.1；程序已自包含 .NET 运行时。
 2. 用管理员 PowerShell 进入解压目录，任选一种安装方式：
 
 ```powershell
@@ -42,6 +42,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install.ps1 -E
 - 睡眠/休眠/关机期间 API 不可用；断网时远程不可达，已收任务可能继续；任务状态与输出重启即丢失，不自动重放。取消只尽力终止任务树，不回滚副作用，也不是沙箱。
 
 详细接口、状态边界、curl 和 PowerShell 示例见 [中文 API 文档](docs/API.zh-CN.md)，WebUI 内也可打开。
+
+## 自动更新
+
+1.1.0 起默认启用：启动约 30 秒后检查一次，之后每 3 小时检查最新稳定 Release，也可在 WebUI 手动检查。直连失败自动回退到可配置的第三方 HTTPS 下载代理，默认 ghfast.top，并非 GitHub 官方 CDN。发布清单有内置公钥验证的 RSA-PSS 签名，下载包按已签名 SHA256 验证，不能仅靠代理返回的 checksum 冒充可信更新。
+
+独立 helper 在后台验证下载后短暂停止服务、替换程序并检查新服务健康；失败恢复旧版，配置、API 密钥、证书和用户文件保留。当前任务会中断；已运行的托盘尝试以原用户身份重启，桌面控制需重新手动授权。旧版 1.0 用户需要手动安装本版一次。
+
+[更新配置、信任边界、回滚和开机恢复说明](docs/UPDATES.zh-CN.md)。
 
 ## 配置与卸载
 

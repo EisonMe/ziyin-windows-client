@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using ZiYin.Core;
 using ZiYin.Service;
+using ZiYin.Update;
 
 var settings = ServiceSettings.Load();
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = AppContext.BaseDirectory });
@@ -20,6 +21,8 @@ builder.WebHost.ConfigureKestrel(server =>
     });
 });
 builder.Services.AddSingleton(settings);
+builder.Services.AddSingleton<UpdateCoordinator>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCoordinator>());
 builder.Services.AddSingleton<ApiSecurity>();
 builder.Services.AddSingleton<AuditLog>();
 builder.Services.AddSingleton<FileStore>();
@@ -74,7 +77,9 @@ app.MapPost("/api/auth/login", (LoginRequest request, HttpContext context) =>
     audit.Write("session.login"); return Results.Ok(new { expiresInSeconds = 1800 });
 }).RequireRateLimiting("login");
 app.MapPost("/api/auth/logout", (HttpContext context) => { security.Logout(context); context.Response.Cookies.Delete(ApiSecurity.CookieName, new CookieOptions { Path = "/api" }); return Results.NoContent(); });
-app.MapGet("/api/health", () => new { status = audit.Healthy ? "ok" : "degraded", auditHealthy = audit.Healthy, version = "1.0.0", utc = DateTimeOffset.UtcNow, platform = OperatingSystem.IsWindows() ? "windows" : "development", taskStatePersistent = false });
+app.MapGet("/api/health", () => new { status = audit.Healthy ? "ok" : "degraded", auditHealthy = audit.Healthy, version = ReleaseVersion.Current, utc = DateTimeOffset.UtcNow, platform = OperatingSystem.IsWindows() ? "windows" : "development", taskStatePersistent = false });
+app.MapGet("/api/updates", (UpdateCoordinator updater) => updater.Snapshot());
+app.MapPost("/api/updates/check", (UpdateCoordinator updater) => updater.RequestCheck() ? Results.Accepted("/api/updates", new { message = "检查已排队；发现较新的可信稳定版本会自动安装。" }) : Results.Conflict(new { error = "已有更新检查或替换正在运行。" }));
 app.MapGet("/api/settings", () => new { addresses = settings.Addresses(), port = settings.Port, scheme = settings.Tls ? "https" : "http", allowRemote = settings.AllowRemote,
     trustedLanHttp = settings.TrustedLanHttp, fileRoot = settings.FileRoot, serviceIdentity = OperatingSystem.IsWindows() ? "LocalSystem (默认安装)" : "当前开发用户",
     desktopPolicy = "仅本机活动控制台会话；托盘需手动授权；不支持锁屏、登录界面和安全桌面。" });

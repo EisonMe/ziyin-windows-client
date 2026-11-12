@@ -10,3 +10,6 @@ TestResults/
 *.key
 service.json
 api-key.json
+
+*.pem
+!src/ZiYin.Update/release-public.pem

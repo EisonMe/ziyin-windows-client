@@ -70,6 +70,8 @@ JSON 属性采用 camelCase。所有 API 返回 `Cache-Control: no-store`。
 | POST `/api/auth/login` | `{apiKey}`；成功设置 WebUI cookie；每来源 IP 每分钟 5 次。此入口不要求已有认证，仍要求 CSRF header |
 | POST `/api/auth/logout` | 注销当前 cookie |
 | GET `/api/health` | `status/version/utc/platform/taskStatePersistent` |
+| GET `/api/updates` | 当前版本、最新稳定版、自动更新状态/时间/来源、上次安装结果；需要认证 |
+| POST `/api/updates/check` | 手动排队检查，202 表示受理；发现较新可信稳定版自动安装，忙时 409；需认证和 CSRF header |
 | GET `/api/settings` | 实际 `addresses/port/scheme/allowRemote/trustedLanHttp/fileRoot/serviceIdentity/desktopPolicy`；不含密钥 |
 | GET `/api/key` | `{apiKey}`；主动点击查看才调用；需要认证 |
 | PUT `/api/key` | `{apiKey:null}` 随机生成，或传自定义值；返回新密钥；撤销旧密钥及所有会话。已经通过认证、正在执行的请求不会回滚 |
@@ -114,3 +116,5 @@ Windows 任务加入 kill-on-close Job Object，并在取消时请求终止整�
 | 关机/重启 | 不可达，任务中断；重启后服务恢复，任务不重放 | 重新登录及重新授权后才可用 |
 
 HTTP 状态：400 参数错误或 Host 不允许；401 认证失败；403 跨站/CSRF 或权限不足；404 不存在；409 文件冲突或桌面不可用；413 请求过大；429 登录限流或任务容量满；500 内部错误。不要仅凭 202 判断任务完成。
+
+自动更新详情见 [更新说明](UPDATES.zh-CN.md)。升级期间服务短暂停止，已执行任务不回放。

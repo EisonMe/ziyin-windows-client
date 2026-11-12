@@ -22,6 +22,7 @@ async function refresh() {
   setSignedIn(true);
   $('connection').textContent = `实际网卡 IPv4：${data.addresses.join('、') || '未发现可用 IPv4'}\n监听端口：${data.port}\nLAN 访问：${data.allowRemote ? '已开启' : '未开启，仅本机'}\n连接地址：${data.addresses.map(ip => `${data.scheme}://${ip}:${data.port}`).join('  ')}\n传输：${data.scheme === 'https' ? 'TLS' : 'HTTP 明文，仅限可信网络'}\n文件根目录：${data.fileRoot}\n服务账户：${data.serviceIdentity}\n${data.desktopPolicy}`;
   await refreshTasks();
+  await refreshUpdates();
 }
 async function refreshTasks() {
   const tasks = await api('/tasks'); $('tasks').replaceChildren();
@@ -52,3 +53,10 @@ run('screenshot', 'click', async () => { const response = await api('/desktop/sc
 run('input-form', 'submit', async () => { const result = await api('/desktop/input', 'POST', { action: $('input-action').value, x: Number($('input-x').value), y: Number($('input-y').value), text: $('input-text').value, key: $('input-text').value }); $('desktop-result').textContent = result.message; });
 setInterval(() => { if (signedIn && !document.hidden) refreshTasks().catch(e => notice(e.message)); }, 2500);
 refresh().catch(() => setSignedIn(false));
+
+async function refreshUpdates() {
+ const u = await api('/updates');
+ $('update-status').textContent = `当前版本：${u.currentVersion}\n最新稳定版：${u.latestVersion || '尚未检查'}\n自动更新：${u.enabled ? '已开启，每 3 小时' : '已关闭，可手动检查'}\n状态：${u.status} · ${u.message}\n最近检查：${u.lastCheckedAt || '—'}\n下次检查：${u.nextCheckAt || '—'}\n下载来源：${u.source}\n上次安装：${u.lastResult ? u.lastResult.status + ' · ' + u.lastResult.message : '暂无'}`;
+}
+run('check-update', 'click', async () => { await api('/updates/check', 'POST', {}); notice('检查已排队；若发现新版会自动安装，任务可能被中断。'); await refreshUpdates(); });
+setInterval(() => { if (signedIn && !document.hidden) refreshUpdates().catch(e => notice(e.message)); }, 5000);
