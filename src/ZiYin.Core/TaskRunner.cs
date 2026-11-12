@@ -84,6 +84,7 @@ public sealed class TaskRunner : IAsyncDisposable
             {
                 FileName = OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe") : "/bin/sh",
                 RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true,
+                StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8,
                 UseShellExecute = false, CreateNoWindow = true,
                 WorkingDirectory = e.Request.WorkingDirectory ?? AppContext.BaseDirectory
             };
@@ -93,7 +94,7 @@ public sealed class TaskRunner : IAsyncDisposable
                 if (Environment.GetEnvironmentVariable(name) is { } value) p.StartInfo.Environment[name] = value;
             if (OperatingSystem.IsWindows())
             {
-                foreach (var arg in new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(e.Request.Command)) }) p.StartInfo.ArgumentList.Add(arg);
+                foreach (var arg in new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes("[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false); $OutputEncoding = [Console]::OutputEncoding; " + e.Request.Command)) }) p.StartInfo.ArgumentList.Add(arg);
             }
             else { p.StartInfo.ArgumentList.Add("-c"); p.StartInfo.ArgumentList.Add(e.Request.Command); }
             p.Start(); p.StandardInput.Close();

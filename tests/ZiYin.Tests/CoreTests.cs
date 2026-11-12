@@ -54,6 +54,13 @@ public class CoreTests
         Assert.Equal("completed", done.Status); Assert.True(done.OutputTruncated); Assert.Equal(256 * 1024, done.StandardOutput.Length);
     }
     [Fact]
+    public async Task PreservesChineseOutput()
+    {
+        await using var runner = new TaskRunner();
+        var task = runner.Submit(new(OperatingSystem.IsWindows() ? "Write-Output '中文内容'" : "printf '中文内容'"));
+        Assert.Contains("中文内容", (await Finish(runner, task.Id)).StandardOutput);
+    }
+    [Fact]
     public async Task RejectsInvalidTask()
     {
         await using var runner = new TaskRunner();

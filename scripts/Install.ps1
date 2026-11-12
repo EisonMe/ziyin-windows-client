@@ -60,6 +60,19 @@ Protect-Directory $base $true
 Protect-Directory $data $false
 Protect-Directory $files $false
 Protect-Directory $InstallDirectory $true
+# Existing child files may carry explicit read grants; remove them as well.
+foreach ($privateRoot in @($data,$files)) {
+    foreach ($item in Get-ChildItem -LiteralPath $privateRoot -Recurse -Force) {
+        if ($item.PSIsContainer) { Protect-Directory $item.FullName $false; continue }
+        $fileAcl = New-Object Security.AccessControl.FileSecurity
+        $fileAcl.SetAccessRuleProtection($true,$false)
+        $fileAcl.SetOwner((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))
+        foreach ($sid in @('S-1-5-18','S-1-5-32-544')) {
+            $fileAcl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)), 'FullControl', 'Allow')))
+        }
+        Set-Acl -LiteralPath $item.FullName -AclObject $fileAcl
+    }
+}
 $existing = Get-Service -Name ZiYinRemote -ErrorAction SilentlyContinue
 if ($existing) {
     $registered = Get-CimInstance Win32_Service -Filter "Name='ZiYinRemote'"

@@ -9,7 +9,15 @@ $root = Split-Path $PSScriptRoot -Parent
 $package = Join-Path $root 'artifacts\ziyin-windows-client-win-x64'
 $base = 'http://127.0.0.1:17643'
 $headers = $null
+$trustedCert = $null
 try {
+    & "$package\scripts\Install.ps1"
+    # Simulate a legacy admin-owned key with an explicit Users read grant; upgrade must remove it.
+    $keyForUpgrade = "$env:ProgramData\ZiYin\service\api-key.json"
+    for ($i=0; $i -lt 30 -and -not (Test-Path $keyForUpgrade); $i++) { Start-Sleep -Seconds 1 }
+    $legacyAcl = Get-Acl $keyForUpgrade
+    $legacyAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545'), 'Read', 'Allow'))
+    Set-Acl -LiteralPath $keyForUpgrade -AclObject $legacyAcl
     & "$package\scripts\Install.ps1"
     $service = Get-CimInstance Win32_Service -Filter "Name='ZiYinRemote'"
     if ($service.StartMode -ne 'Auto' -or $service.StartName -ne 'LocalSystem') { throw 'Service identity/startup mismatch' }
@@ -52,10 +60,21 @@ try {
     if ($health.status -ne 'ok') { throw 'Service restart failed' }
     $tasks = Invoke-RestMethod "$base/api/tasks" -Headers $headers
     if ($tasks.Count -ne 0) { throw 'Task records unexpectedly persisted' }
+    # Validate actual TLS with normal certificate verification on the disposable runner.
+    & "$package\scripts\Install.ps1" -EnableLan -GenerateTls
+    $trustedCert = Import-Certificate -FilePath "$env:ProgramData\ZiYin\server.cer" -CertStoreLocation Cert:\CurrentUser\Root
+    $tlsHealth = Invoke-RestMethod 'https://127.0.0.1:17643/api/health' -Headers $headers
+    if ($tlsHealth.status -ne 'ok') { throw 'Verified TLS health failed' }
+    $firewall = Get-NetFirewallRule -Name ZiYinRemote
+    if ($firewall.Profile -ne 'Private') { throw 'LAN firewall profile mismatch' }
+    $filter = $firewall | Get-NetFirewallAddressFilter
+    if ($filter.RemoteAddress -notcontains 'LocalSubnet') { throw 'LAN firewall source is not restricted' }
+    Write-Host 'PASS: TLS certificate validation and Private/LocalSubnet firewall.'
     Write-Host 'PASS: SCM automatic LocalSystem service, authenticated health, unauthenticated rejection, WebUI/docs, PowerShell task, file roundtrip, desktop default deny, secret ACL, service restart.'
 } finally {
     if ($headers) { $headers.Clear() }; $key = $null
     & "$package\scripts\Uninstall.ps1" -Confirm:$false
+    if ($trustedCert) { Remove-Item -LiteralPath "Cert:\CurrentUser\Root\$($trustedCert.Thumbprint)" }
 }
 if (Get-Service ZiYinRemote -ErrorAction SilentlyContinue) { throw 'Service still exists after uninstall' }
 if (-not (Test-Path "$env:ProgramData\ZiYin\files\smoke.txt")) { throw 'Uninstall deleted user data' }
