@@ -34,13 +34,13 @@ try {
     if ($html.Content -notmatch 'Windows' -or $html.StatusCode -ne 200) { throw 'WebUI missing' }
     $docs = Invoke-WebRequest "$base/API.zh-CN.md"
     if ($docs.Content -notmatch 'PowerShell') { throw 'API docs missing from package' }
-    $task = Invoke-RestMethod "$base/api/tasks" -Method Post -Headers $headers -ContentType application/json -Body '{"command":"whoami; Write-Output service-smoke","timeoutSeconds":20}'
-    for ($i=0; $i -lt 40; $i++) {
+    $task = Invoke-RestMethod "$base/api/tasks" -Method Post -Headers $headers -ContentType application/json -Body '{"command":"whoami; Write-Output service-smoke","timeoutSeconds":60}'
+    for ($i=0; $i -lt 140; $i++) {
         $state = Invoke-RestMethod "$base/api/tasks/$($task.id)" -Headers $headers
         if ($state.finishedAt) { break }
         Start-Sleep -Milliseconds 500
     }
-    if ($state.status -ne 'completed' -or $state.standardOutput -notmatch 'service-smoke' -or $state.standardOutput -notmatch 'system') { throw 'SCM service task failed' }
+    if ($state.status -ne 'completed' -or $state.standardOutput -notmatch 'service-smoke' -or $state.standardOutput -notmatch 'system') { Write-Host ($state | ConvertTo-Json -Depth 5); throw 'SCM service task failed' }
     Invoke-RestMethod "$base/api/files/content?path=smoke.txt" -Method Put -Headers $headers -ContentType text/plain -Body 'smoke-file' | Out-Null
     $content = Invoke-WebRequest "$base/api/files/content?path=smoke.txt" -Headers $headers
     $bodyText = if ($content.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($content.Content) } else { $content.Content }

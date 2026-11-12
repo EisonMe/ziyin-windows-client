@@ -60,8 +60,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\ZiYin
 
 ```powershell
 dotnet test tests/ZiYin.Tests/ZiYin.Tests.csproj -c Release
-.\scripts\Build.ps1
+pwsh -NoProfile -File .\scripts\Build.ps1
 ```
+
+开发构建需要 .NET 10 SDK 和 PowerShell 7；安装、卸载和密钥窗口支持 Windows PowerShell 5.1。
 
 构建输出 `artifacts/ziyin-windows-client-win-x64.zip` 与 `SHA256SUMS.txt`。GitHub Actions 使用 windows-latest，测试认证、CSRF、密钥轮换、文件路径限制、任务输出/超时/取消，编译服务和托盘、打包并实际安装服务做 smoke test，之后卸载并上传 artifact。工作流未进行真实用户交互桌面验收。
 

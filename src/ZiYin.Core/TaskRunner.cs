@@ -90,7 +90,10 @@ public sealed class TaskRunner : IAsyncDisposable
             };
             // Do not pass service credentials or hosting configuration to child processes.
             p.StartInfo.Environment.Clear();
-            foreach (var name in new[] { "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP", "COMSPEC", "PATHEXT", "PSModulePath" })
+            foreach (var name in new[] { "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP", "COMSPEC", "PATHEXT", "PSModulePath",
+                "USERPROFILE", "APPDATA", "LOCALAPPDATA", "HOMEDRIVE", "HOMEPATH", "ProgramData", "ProgramFiles",
+                "ProgramFiles(x86)", "ProgramW6432", "CommonProgramFiles", "CommonProgramFiles(x86)", "CommonProgramW6432",
+                "COMPUTERNAME", "USERNAME", "USERDOMAIN", "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE" })
                 if (Environment.GetEnvironmentVariable(name) is { } value) p.StartInfo.Environment[name] = value;
             if (OperatingSystem.IsWindows())
             {
