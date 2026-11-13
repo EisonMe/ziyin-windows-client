@@ -120,19 +120,19 @@ public sealed class ApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.TooManyRequests, (await client.PostAsJsonAsync("/api/auth/login", new { apiKey = "wrong" })).StatusCode);
     }
     [Fact]
-    public async Task StaticUiAndDocsArePackagedWithSecurityHeaders()
+    public async Task StaticUiDeliversSafeIntegrationPromptsAndDocsWithSecurityHeaders()
     {
         var ui = await client.GetAsync("/"); ui.EnsureSuccessStatusCode();
         var html = await ui.Content.ReadAsStringAsync();
         Assert.Contains("<html", html);
-        Assert.Contains("id=\"copy-skill-prompt\"", html);
-        Assert.Contains("id=\"copy-astrbot-prompt\"", html);
+        Assert.Contains("请为紫音 Windows 客户端创建并安装一个可真实调用的 Agent Skill。", html);
+        Assert.Contains("请通过 AstrBot 官方插件管理器的 GitHub 安装入口安装公开仓库", html);
+        Assert.Contains("API Key：&lt;从 Agent 的安全环境变量或凭证管理器读取", html);
+        Assert.Contains("api_key = &lt;从 AstrBot 的安全配置或凭证管理器读取", html);
         Assert.Contains("frame-ancestors 'none'", ui.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Contains("PowerShell", await client.GetStringAsync("/API.zh-CN.md"));
-        var appJs = await client.GetStringAsync("/app.js");
-        Assert.Contains("use strict", appJs);
-        Assert.Contains("async function copyText(text)", appJs);
-        Assert.Contains("document.execCommand?.('copy')", appJs);
+        var appJs = await client.GetAsync("/app.js");
+        appJs.EnsureSuccessStatusCode();
     }
     [Fact]
     public async Task AuditStorageFailureDegradesHealthWithoutLosingTaskWorkers()

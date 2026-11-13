@@ -10,8 +10,56 @@
 <section><h2>文件</h2><p>仅允许配置的文件根目录内操作，单文件最大 10 MiB。上传会覆盖同名文件。</p><div class="row"><input id="file-path" placeholder="相对路径，例如 notes.txt" aria-label="文件相对路径"><button id="list-files">列目录</button><button id="mkdir">建目录</button><button id="download">下载</button><button id="delete-file" class="secondary">删除文件</button></div><div class="row"><input id="upload-file" type="file" aria-label="上传文件"><button id="upload">上传到上面的路径</button></div><pre id="files"></pre></section>
 <section><h2>普通桌面</h2><p>须在本机托盘中手动开启。只支持活动控制台用户的普通桌面，不支持锁屏、登录界面、UAC 安全桌面或远程 RDP 会话。不能操作权限更高的窗口。</p><div class="row"><button id="desktop-status">检查状态</button><button id="screenshot">截图</button></div><pre id="desktop-result"></pre><img id="screen" alt="当前普通桌面截图" hidden><form id="input-form"><div class="row"><label>操作<select id="input-action"><option value="move">移动</option><option value="click">左键点击</option><option value="text">文字</option><option value="key">按键</option></select></label><label>X<input id="input-x" type="number" value="0"></label><label>Y<input id="input-y" type="number" value="0"></label></div><div class="row"><input id="input-text" placeholder="输入文字，或 ENTER/TAB/ESCAPE 等按键名" maxlength="1000" aria-label="输入内容"><button>发送输入</button></div></form></section>
 <section><div class="row"><h2>审计日志</h2><button id="logs-refresh">刷新日志</button></div><p>记录任务状态和操作类型，不记录密钥、命令、文件内容或输入文字。</p><pre id="logs"></pre></section>
-</div><section id="integration" hidden><h2>接入方式</h2><div class="row"><label>LAN 地址<select id="remote-address"></select></label><label>其他可达 IP<input id="custom-address" type="url" placeholder="https://电脑的VPN-IP:17643" autocomplete="off"></label></div><label class="key-choice"><input type="checkbox" id="include-key">在本次复制中包含 API 密钥</label><p id="integration-note">密钥默认以占位符表示。选择包含密钥后需再次确认；不会保存在浏览器存储中。</p><div class="integration-options"><div><h3>Skill 调用</h3><button id="copy-skill-prompt">复制 Skill 提示词</button><a href="/API.zh-CN.md#skill-调用看这里" target="_blank" rel="noopener">查看步骤</a></div><div><h3>AstrBot 插件调用</h3><button id="copy-astrbot-prompt">复制插件提示词</button><a href="/API.zh-CN.md#astrbot-插件调用看这里" target="_blank" rel="noopener">查看步骤</a></div></div><h3>API 参考</h3><a href="/API.zh-CN.md" target="_blank" rel="noopener">完整中文 API 参考 · curl / PowerShell</a><details><summary>快速示例（使用环境变量存放密钥）</summary><pre>curl -H "Authorization: Bearer $ZIYIN_API_KEY" "$ZIYIN_BASE/api/health"
+</div>
+<section id="integration">
+<h2>接入方式</h2>
+<p>展开提示词后可选中并手动复制；地址和 API Key 请从目标工具的安全配置中填写。</p>
+<details class="integration-prompt">
+<summary>Skill 调用</summary>
+<pre class="prompt-copy">请为紫音 Windows 客户端创建并安装一个可真实调用的 Agent Skill。
+
+需要创建：
+- skills/ziyin-windows-client/SKILL.md
+- skills/ziyin-windows-client/scripts/ziyin_client.py
+
+参考模板：https://github.com/EisonMe/astrbot_plugin_ziyin_client/tree/main/skills/ziyin-windows-client
+API 文档：https://github.com/EisonMe/ziyin-windows-client/blob/main/docs/API.zh-CN.md
+
+Windows 客户端地址：&lt;Agent 主机可访问的 Windows 客户端地址，例如 https://192.168.1.20:17643&gt;
+API Key：&lt;从 Agent 的安全环境变量或凭证管理器读取，不要将真实密钥写进 Skill、日志或仓库&gt;
+
+连接和安全要求：
+- 使用 Agent 主机实际可达的地址；不要把远程 Windows 主机误写成 localhost。
+- 默认使用 HTTPS，并验证证书与主机名。自签名证书应配置受信任 CA，不要关闭验证。
+- 仅在用户明确选择的可信隔离局域网中使用 HTTP。
+- 先只读调用 GET /api/health。缺少真实地址或密钥时，报告尚未联通。
+- 不要在 Skill、日志、命令行参数或仓库中保存真实 API Key。
+- 执行命令、写文件、删除文件或控制桌面前，必须取得用户对该操作的明确授权。</pre>
+</details>
+<details class="integration-prompt">
+<summary>AstrBot 插件调用</summary>
+<pre class="prompt-copy">请通过 AstrBot 官方插件管理器的 GitHub 安装入口安装公开仓库：
+https://github.com/EisonMe/astrbot_plugin_ziyin_client
+
+安装后核对 metadata.yaml，并确认插件来自该仓库。安装和配置需要当前 AstrBot 实例管理员权限；如果没有权限，请报告未安装，不要声称已完成。
+
+插件配置：
+base_url = &lt;AstrBot 主机可访问的 Windows 客户端地址，例如 https://192.168.1.20:17643&gt;
+api_key = &lt;从 AstrBot 的安全配置或凭证管理器读取，不要写入仓库或日志&gt;
+
+这是 AstrBot 主机可达的 Windows 客户端地址，不要替换成 localhost。端口使用 Windows 客户端实际配置的端口，默认 17643。
+
+安全要求：
+- 默认验证 TLS 证书和主机名；自签名证书通过 ca_file 配置信任证书，不要关闭验证。
+- 仅在用户明确选择的可信隔离局域网中使用 HTTP，并显式启用 allow_insecure_http。
+- allow_group、allow_file_write、allow_desktop_control 保持关闭。
+- 配置后只调用 ziyin_client_health 做只读连通测试。缺少真实地址或密钥时，报告尚未联通。
+- 不执行命令或其他有副作用的操作，除非用户明确授权。</pre>
+</details>
+</section>
+<section><h2>API 参考</h2><p>敏感接口均需认证。不要把密钥放进 URL。HTTP 仅供明确可信的隔离局域网使用；公共网络请使用 TLS，且不要转发公网端口。</p><a href="/API.zh-CN.md" target="_blank" rel="noopener">完整中文 API 参考 · curl / PowerShell</a><details><summary>快速示例（使用环境变量存放密钥）</summary><pre>curl -H "Authorization: Bearer $ZIYIN_API_KEY" "$ZIYIN_BASE/api/health"
 
 $headers = @{Authorization="Bearer $env:ZIYIN_API_KEY"; 'X-ZiYin-Request'='1'}
 Invoke-RestMethod "$env:ZIYIN_BASE/api/tasks" -Method Post -Headers $headers `
-  -ContentType 'application/json' -Body '{"command":"Get-Date","timeoutSeconds":30}'</pre></details></section></main><footer>退出托盘不会停止服务。关机、休眠或网络中断期间，远程 API 不可达。</footer></body></html>
+  -ContentType 'application/json' -Body '{"command":"Get-Date","timeoutSeconds":30}'</pre></details></section>
+</main><footer>退出托盘不会停止服务。关机、休眠或网络中断期间，远程 API 不可达。</footer></body></html>
