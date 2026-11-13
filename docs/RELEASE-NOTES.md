@@ -1,10 +1,8 @@
-紫音 Windows 客户端 1.2.0
+紫音 Windows 客户端 1.2.1
 
-- 增加 Skill 与 AstrBot 插件接入说明及可复制配置提示词。
-- WebUI 登录后提供 LAN 地址选择、Windows 网卡实际拥有的 VPN IP 输入及安全复制提示词；API Key 默认不复制，显式勾选后再次确认才包含。
-- API 密钥不写入浏览器持久存储；保留完整中文 API 参考。
-- 包含独立 AstrBot 插件仓库链接；安装仅通过 AstrBot 官方管理器，由管理员操作。
-- 自动更新机制保持 v1.1.0 的 RSA-PSS 签名、SHA256 和配置保留链路不变。
+- 修复 WebUI 局域网 HTTP 环境下「复制 Skill 提示词」与「复制插件提示词」两个按钮点击无反应的问题：在非安全上下文或 Clipboard API 不可用时自动回退到受保护的临时文本框复制，并在完成后立即清空移除；剪贴板被浏览器完全拒绝时弹出明确提示。
+- 保留 1.2.0 的 Skill 与 AstrBot 插件接入说明及安全复制流程：API Key 默认不复制，显式勾选后先复位勾选框再二次确认才从受认证接口获取，不写入浏览器持久存储或日志。
+- 自动更新机制保持 RSA-PSS 签名、SHA256 校验和配置保留链路不变。
 
 下载 `ziyin-windows-client-win-x64.zip` 并完整解压，管理员运行 `scripts/Install.ps1`。首次 LAN 安装推荐 `-EnableLan -GenerateTls`，按 README 核对并信任证书。程序自包含 .NET 10，无需单独安装运行时。
 

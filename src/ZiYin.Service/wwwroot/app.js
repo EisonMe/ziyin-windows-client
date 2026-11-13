@@ -87,20 +87,48 @@ function remoteBase() {
   }
   return url.origin;
 }
+async function copyText(text) {
+  if (typeof navigator.clipboard?.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch { }
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.setAttribute('aria-hidden', 'true');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
+  let copied = false;
+  try {
+    document.body.append(textarea);
+    textarea.focus();
+    textarea.select();
+    copied = Boolean(document.execCommand?.('copy'));
+  } catch { }
+  finally {
+    textarea.value = '';
+    textarea.remove();
+  }
+  if (!copied) throw new Error('复制失败：浏览器未开放剪贴板写入。请检查站点剪贴板权限，或改用 HTTPS/localhost 后重试；提示词未复制。');
+}
 async function integrationPrompt(kind) {
   if (!signedIn) throw new Error('请先登录 WebUI。');
   const base = remoteBase();
+  const includeKey = $('include-key').checked;
+  $('include-key').checked = false;
   if (base.startsWith('http://') && !confirm('此地址使用明文 HTTP，密钥及命令可能被监听。确认仅用于可信隔离局域网？')) return;
   let keyValue = '<由用户在目标工具的安全配置中填写>';
-  if ($('include-key').checked) {
+  if (includeKey) {
     if (!confirm('密钥将进入剪贴板。只在当前电脑可信、且目标工具受你控制时继续？')) return;
     keyValue = (await api('/key')).apiKey;
   }
   const prompt = kind === 'skill'
     ? `请为紫音 Windows 客户端创建真实可调用的 Agent Skill：写入 skills/ziyin-windows-client/SKILL.md 与 skills/ziyin-windows-client/scripts/ziyin_client.py，并按当前 Agent 的 Skill 发现机制放置。参考模板 https://github.com/EisonMe/astrbot_plugin_ziyin_client/tree/main/skills/ziyin-windows-client 和 API https://github.com/EisonMe/ziyin-windows-client/blob/main/docs/API.zh-CN.md。调用端可达地址为 ${base}；API Key：${keyValue}。从安全环境变量或凭证管理器读取密钥，不写入 Skill、日志或仓库。默认验证 TLS 证书和主机名，自签名证书配置受信任 CA；HTTP 仅在用户明确选择的可信隔离 LAN 中使用。先只读调用 GET /api/health；未取得真实密钥或地址时报告未联通。任务、文件和桌面写操作须得到用户明确授权。`
     : `请使用 AstrBot 官方插件管理器的 GitHub 安装入口安装公开仓库 https://github.com/EisonMe/astrbot_plugin_ziyin_client，核实 metadata.yaml；需要当前实例管理员权限，没有权限就报告未安装。插件 base_url=${base}，api_key=${keyValue}。这是 AstrBot 主机可达的 Windows 客户端地址，不要改成 localhost；端口 ${new URL(base).port}。默认 TLS 证书与主机名验证，私有证书配置 ca_file；HTTP 仅在用户明确选择的可信隔离 LAN 中启用 allow_insecure_http。保持 allow_group、allow_file_write、allow_desktop_control 关闭。配置后仅调用 ziyin_client_health 做只读连通测试；未配置真实密钥或网络不可达就报告未联通，不执行命令。`;
-  await navigator.clipboard.writeText(prompt);
-  $('include-key').checked = false;
+  await copyText(prompt);
   notice('提示词已复制。剪贴板含敏感信息时请及时清除。');
 }
 run('copy-skill-prompt', 'click', () => integrationPrompt('skill'));

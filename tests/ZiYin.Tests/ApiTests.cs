@@ -123,10 +123,16 @@ public sealed class ApiTests : IAsyncLifetime
     public async Task StaticUiAndDocsArePackagedWithSecurityHeaders()
     {
         var ui = await client.GetAsync("/"); ui.EnsureSuccessStatusCode();
-        Assert.Contains("<html", await ui.Content.ReadAsStringAsync());
+        var html = await ui.Content.ReadAsStringAsync();
+        Assert.Contains("<html", html);
+        Assert.Contains("id=\"copy-skill-prompt\"", html);
+        Assert.Contains("id=\"copy-astrbot-prompt\"", html);
         Assert.Contains("frame-ancestors 'none'", ui.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Contains("PowerShell", await client.GetStringAsync("/API.zh-CN.md"));
-        Assert.Contains("use strict", await client.GetStringAsync("/app.js"));
+        var appJs = await client.GetStringAsync("/app.js");
+        Assert.Contains("use strict", appJs);
+        Assert.Contains("async function copyText(text)", appJs);
+        Assert.Contains("document.execCommand?.('copy')", appJs);
     }
     [Fact]
     public async Task AuditStorageFailureDegradesHealthWithoutLosingTaskWorkers()
